@@ -46,6 +46,8 @@ Also, if there is a signature in the header (DISKDUDE, etc), my program will not
 
 You may have to edit the .base directives in the main .asm file. Especially if you are editing the source in the file. Do NOT assume that my program has any idea about what address each bank should start with. 
 
+You may have to remove spaces from the .nes filename, before disassembling. The file would probably disassemble correctly, but, asm6 will give error messages for filenames with spaces in them.
+
 I didn't use any illegal opcodes. Feel free to edit the source, if you want them in.
 
 
