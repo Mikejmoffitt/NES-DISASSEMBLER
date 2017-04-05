@@ -36,13 +36,10 @@ path = r"C:\Users\Doug\Desktop\PowerPak\py_test\SMB2.nes"
 # initialize some variables
 
 count = 0
-bankSize = 16384 # default size
 first = ""
 second = ""
 third = ""
 currentBank = ""
-
-
 
 # define some functions
 
@@ -854,486 +851,488 @@ def ToASM(byte1,byte2,byte3):
 
 #end of big function
 
+def printMapperMisc(byte6):
+	# mirroring = low bit of byte6
 
+	mirror = byte6 & 0x08 # 4 screen
+	if (mirror == 0):
+		mirror = byte6 & 0x01 # 2 screen
+		
+	if (mirror == 0):
+		print ("horizontal mirroring")
+	elif (mirror == 1):
+		print ("vertical mirroring")
+	else:
+		print ("4 screen mode")
+		
+		
+# extra RAM at 6000 = byte6 ? bit 2
 
+	a = byte6 & 0x02
+	if (a != 0):
+		print ("extra RAM at $6000, yes")
 
-
-
-# START OF PROGRAM
-
-filename = os.path.basename(path)
-
-try:
-	fileIn = open(path, "rb") #read bytes
-except:
-	print("\nERROR: couldn't find file\n")
-	raise
-	
-print (filename)
-filesize = os.path.getsize(path)
-print("filesize = ", filesize)
-folder = os.path.dirname(path)
-	
-workArray = fileIn.read() #make a big int array 
-
-testarray = bytearray(b'\x4e\x45\x53\x1a') # NES 1a
-
-
-
-# validate header	
-	
-for i in range (0,4):
-	#print (workArray[i], " ", testarray[i])
-	if (workArray[i] != testarray[i]):
-		print("\nERROR: couldn't find iNES header\n")
+def main():
+	bankSize = 16384 # default size
+	if len(sys.argv) < 2:
+		print("usage: " + sys.argv[0] + " <path>")
 		exit()
+	path = sys.argv[1];
+	
+
+# Get file
+	filename = os.path.basename(path)
+
+	try:
+		fileIn = open(path, "rb") #read bytes
+	except:
+		print("\nERROR: couldn't open file.\n")
+		raise
+
+	print(filename)
+	filesize = os.path.getsize(path)
+	print("filesize = ", filesize)
+	folder = os.path.dirname(path)
+		
+	workArray = fileIn.read() #make a big int array 
+
+	testarray = bytearray(b'\x4e\x45\x53\x1a') # NES 1a
+
+# validate header
+		
+	for i in range (0,4):
+		#print (workArray[i], " ", testarray[i])
+		if (workArray[i] != testarray[i]):
+			print("\nERROR: couldn't find iNES header\n")
+			exit()
 		
 		
 # get ROM sizes
-	
-prgROM = workArray[4]
-prgROMtotal = prgROM * 0x4000
-print ("PRGROM size = ", prgROM, " = ", prgROMtotal)
+	prgROM = workArray[4]
+	prgROMtotal = prgROM * 0x4000
+	print ("PRGROM size = ", prgROM, " = ", prgROMtotal)
 
-chrROM = workArray[5]
-chrROMtotal = chrROM * 0x2000
-print ("CHRROM size = ", chrROM, " = ", chrROMtotal)	
+	chrROM = workArray[5]
+	chrROMtotal = chrROM * 0x2000
+	print ("CHRROM size = ", chrROM, " = ", chrROMtotal)	
+		
+	a = 16 + prgROMtotal + chrROMtotal
+	print ("Header + PRGROM + CHRROM = ", a)
+	if (filesize != a):		
+		print ("ERROR: filesize does not match the header")
+		exit()
+	else:
+		print ("filesize matches header, ok")
 	
-a = 16 + prgROMtotal + chrROMtotal
-print ("Header + PRGROM + CHRROM = ", a)
-if (filesize != a):		
-	print ("ERROR: filesize does not match the header")
-	exit()
-else:
-	print ("filesize matches header, ok")
-	
-	
-# get mapper	
+# get mapper
 
-a = 0
-b = 0
-c = 0
-byte6 = 0
-byte7 = 0
+	a = 0
+	b = 0
+	c = 0
+	byte6 = 0
+	byte7 = 0
 
-byte6 = workArray[6]
-a = byte6 >> 4
-byte7 = workArray[7]
-b = byte7 & 0xf0
-c = a + b
+	byte6 = workArray[6]
+	a = byte6 >> 4
+	byte7 = workArray[7]
+	b = byte7 & 0xf0
+	c = a + b
 
-Map = ""
+	Map = ""
 
 # default bankSize = 16384, already set
-if (prgROM == 2):
-	bankSize = 32768
+	if (prgROM == 2):
+		bankSize = 32768
 #1/2 = 8192
 
-if c == 0:
-	Map = "NROM"
-elif c == 1:
-	Map = "MMC1 SxROM"
-elif c == 2:
-	Map = "UxROM"
-elif c == 3:
-	Map = "CNROM"
-elif c == 4:
-	Map = "MMC3 TxROM"	
-	bankSize = 8192
-elif c == 5:
-	Map = "MMC5 ExROM"
-elif c == 7:
-	Map = "AxROM"
-	bankSize = 32768
-elif c == 9:
-	Map = "MMC2 PxROM"
-elif c == 10:
-	Map = "MMC4 FxROM"
-elif c == 11:
-	Map = "COLOR DREAMS"
-elif c == 13:
-	Map = "CPROM"
-elif c == 16:
-	Map = "Bandai"
-elif c == 18:
-	Map = "Jaleco"
-elif c == 19:
-	Map = "Namco 163"
-elif c == 20:
-	Map = "FDS"
-elif c == 21:
-	Map = "Konami VRC4"
-elif c == 22:
-	Map = "Konami VRC2"	
-elif c == 23:
-	Map = "Konami variation"
-elif c == 24:
-	Map = "Konami VRC6"
-elif c == 25:
-	Map = "Konami variation"
-elif c == 26:
-	Map = "Konami VRC6"
-elif c == 28:
-	Map = "Action 53"
-elif c == 30:
-	Map = "UNROM RetroUSB"
-elif c == 31:
-	Map = "NSF music"
-elif c == 32:
-	Map = "Irem's G-101"
-elif c == 33:
-	Map = "Taito's TC0190"
-elif c == 34:
-	Map = "BNROM or NINA-001"
-	bankSize = 32768
-elif c == 36:
-	Map = "TXC"
-elif c == 48:
-	Map = "Taito's TC0690"
-elif c == 64:
-	Map = "Tengen RAMBO-1"
-elif c == 65:
-	Map = "Irem's H3001"
-elif c == 66:
-	Map = "GxROM or MHROM"
-elif c == 67:
-	Map = "Sunsoft-3"
-elif c == 68:
-	Map = "Sunsoft-4"
-elif c == 69:
-	Map = "Sunsoft FME-7"
-elif c == 70:
-	Map = "Bandai"
-elif c == 71:
-	Map = "Codemasters"
-elif c == 72:
-	Map = "Jaleco's JF-17"
-elif c == 73:
-	Map = "Konami VRC3"
-elif c == 74:
-	Map = "Eastern games"
-elif c == 75:
-	Map = "Konami VRC1"
-elif c == 76:
-	Map = "Namcot 108"
-elif c == 77:
-	Map = "Irem"
-elif c == 78:
-	Map = "Irem"
-elif c == 79:
-	Map = "NINA-03 or NINA-06"
-elif c == 80:
-	Map = "Taito's X1-005"	
-elif c == 82:
-	Map = "Taito's X1-017"	
-elif c == 85:
-	Map = "Konami VRC7"	
-elif c == 86:
-	Map = "Jaleco's JF-13"	
-elif c == 87:
-	Map = "Jaleco"	
-elif c == 88:
-	Map = "Namco"		
-elif c == 89:
-	Map = "Sunsoft"	
-elif c == 93:
-	Map = "Sunsoft"	
-elif c == 94:
-	Map = "HVC-UN1ROM"	
-elif c == 99:
-	Map = "Vs. System"	
-elif c == 118:
-	Map = "TKSROM and TLSROM"	
-elif c == 119:
-	Map = "TQROM"		
-	
-else:
-	Map = "Other / Too Lazy to type them all in."
+	if c == 0:
+		Map = "NROM"
+	elif c == 1:
+		Map = "MMC1 SxROM"
+	elif c == 2:
+		Map = "UxROM"
+	elif c == 3:
+		Map = "CNROM"
+	elif c == 4:
+		Map = "MMC3 TxROM"	
+		bankSize = 8192
+	elif c == 5:
+		Map = "MMC5 ExROM"
+	elif c == 7:
+		Map = "AxROM"
+		bankSize = 32768
+	elif c == 9:
+		Map = "MMC2 PxROM"
+	elif c == 10:
+		Map = "MMC4 FxROM"
+	elif c == 11:
+		Map = "COLOR DREAMS"
+	elif c == 13:
+		Map = "CPROM"
+	elif c == 16:
+		Map = "Bandai"
+	elif c == 18:
+		Map = "Jaleco"
+	elif c == 19:
+		Map = "Namco 163"
+	elif c == 20:
+		Map = "FDS"
+	elif c == 21:
+		Map = "Konami VRC4"
+	elif c == 22:
+		Map = "Konami VRC2"	
+	elif c == 23:
+		Map = "Konami variation"
+	elif c == 24:
+		Map = "Konami VRC6"
+	elif c == 25:
+		Map = "Konami variation"
+	elif c == 26:
+		Map = "Konami VRC6"
+	elif c == 28:
+		Map = "Action 53"
+	elif c == 30:
+		Map = "UNROM RetroUSB"
+	elif c == 31:
+		Map = "NSF music"
+	elif c == 32:
+		Map = "Irem's G-101"
+	elif c == 33:
+		Map = "Taito's TC0190"
+	elif c == 34:
+		Map = "BNROM or NINA-001"
+		bankSize = 32768
+	elif c == 36:
+		Map = "TXC"
+	elif c == 48:
+		Map = "Taito's TC0690"
+	elif c == 64:
+		Map = "Tengen RAMBO-1"
+	elif c == 65:
+		Map = "Irem's H3001"
+	elif c == 66:
+		Map = "GxROM or MHROM"
+	elif c == 67:
+		Map = "Sunsoft-3"
+	elif c == 68:
+		Map = "Sunsoft-4"
+	elif c == 69:
+		Map = "Sunsoft FME-7"
+	elif c == 70:
+		Map = "Bandai"
+	elif c == 71:
+		Map = "Codemasters"
+	elif c == 72:
+		Map = "Jaleco's JF-17"
+	elif c == 73:
+		Map = "Konami VRC3"
+	elif c == 74:
+		Map = "Eastern games"
+	elif c == 75:
+		Map = "Konami VRC1"
+	elif c == 76:
+		Map = "Namcot 108"
+	elif c == 77:
+		Map = "Irem"
+	elif c == 78:
+		Map = "Irem"
+	elif c == 79:
+		Map = "NINA-03 or NINA-06"
+	elif c == 80:
+		Map = "Taito's X1-005"	
+	elif c == 82:
+		Map = "Taito's X1-017"	
+	elif c == 85:
+		Map = "Konami VRC7"	
+	elif c == 86:
+		Map = "Jaleco's JF-13"	
+	elif c == 87:
+		Map = "Jaleco"	
+	elif c == 88:
+		Map = "Namco"		
+	elif c == 89:
+		Map = "Sunsoft"	
+	elif c == 93:
+		Map = "Sunsoft"	
+	elif c == 94:
+		Map = "HVC-UN1ROM"	
+	elif c == 99:
+		Map = "Vs. System"	
+	elif c == 118:
+		Map = "TKSROM and TLSROM"	
+	elif c == 119:
+		Map = "TQROM"		
+		
+	else:
+		Map = "Other / Too Lazy to type them all in."
 
+	print ("Mapper number = ", c, " = ", Map)	
 
-print ("Mapper number = ", c, " = ", Map)	
-
-
-# mirroring = low bit of byte6
-
-a = byte6 & 0x08 # 4 screen
-if (a == 0):
-	a = byte6 & 0x01 # 2 screen
-	
-if (a == 0):
-	print ("horizontal mirroring")
-elif (a == 1):
-	print ("vertical mirroring")
-else:
-	print ("4 screen mode")
-	
-	
-# extra RAM at 6000 = byte6 ? bit 2
-
-a = byte6 & 0x02
-if (a != 0):
-	print ("extra RAM at $6000, yes")
-	
-	
+	printMapperMisc(byte6)
+		
+		
 # sanity check	
 
-if prgROM == 0 or filesize < 16400:
-	print ("file too small, not valid")
-	exit()
-	
+	if prgROM == 0 or filesize < 16400:
+		print ("file too small, not valid")
+		exit()
+		
 	
 	
 # split ROM into 2 binary files, PRG minus the header (called .bin), and CHR
 
-newName = os.path.splitext(filename)[0] # strip the extension
-newPath = os.path.join(folder, newName + ".bin")	
-	
-fileOut = open(newPath,"wb") # write bytes
+	newName = os.path.splitext(filename)[0] # strip the extension
+	newPath = os.path.join(folder, newName + ".bin")	
+		
+	fileOut = open(newPath,"wb") # write bytes
 
-for i in range (16, prgROMtotal+16):
-	a = workArray[i]
-	a = bytes([a])
-	fileOut.write(a)
-	
-fileOut.close	
-print (newName+ ".bin created")
+	for i in range (16, prgROMtotal+16):
+		a = workArray[i]
+		a = bytes([a])
+		fileOut.write(a)
+		
+	fileOut.close	
+	print (newName+ ".bin created")
 
 
 
 
 #chrROMtotal
-if (chrROM != 0):
-	#newName = os.path.splitext(filename)[0] # strip the extension
-	newPath = os.path.join(folder, newName + ".chr")	
-	
-	fileOut = open(newPath,"wb") # write bytes
-	
-	for i in range (prgROMtotal+16, chrROMtotal+prgROMtotal+16):
-		a = workArray[i]
-		a = bytes([a])
-		fileOut.write(a)
-	
-	fileOut.close	
-	
-	print (newName+ ".chr created")
-	
-else:
-	print ("No CHR")
+	if (chrROM != 0):
+		#newName = os.path.splitext(filename)[0] # strip the extension
+		newPath = os.path.join(folder, newName + ".chr")	
+		
+		fileOut = open(newPath,"wb") # write bytes
+		
+		for i in range (prgROMtotal+16, chrROMtotal+prgROMtotal+16):
+			a = workArray[i]
+			a = bytes([a])
+			fileOut.write(a)
+		
+		fileOut.close	
+		
+		print (newName+ ".chr created")
+		
+	else:
+		print ("No CHR")
 
-	
+		
 # get bank size, from user
 
-Valid = 0
-b = 0
-print("Recommended bank size = ", bankSize)
-while (Valid == 0):
-	a = input("OK? Y/N:")
-	if a == "Y" or a == "y":
-		Valid = 1
-	else:
-		while (b == 0):
-			b = input("1 = 8192, 2 = 16384, 4 = 32768:")
-			if b == "1":
-				bankSize = 8192
-				Valid = 1
-				break
-			elif b == "2":
-				bankSize = 16384
-				Valid = 1
-				break
-			elif b == "4":
-				bankSize = 32768
-				Valid = 1
-				break	
-			else:
-				b = 0
+	Valid = 0
+	b = 0
+	print("Recommended bank size = ", bankSize)
+	while (Valid == 0):
+		a = input("OK? Y/N:")
+		if a == "Y" or a == "y":
+			Valid = 1
+		else:
+			while (b == 0):
+				b = input("1 = 8192, 2 = 16384, 4 = 32768:")
+				if b == "1":
+					bankSize = 8192
+					Valid = 1
+					break
+				elif b == "2":
+					bankSize = 16384
+					Valid = 1
+					break
+				elif b == "4":
+					bankSize = 32768
+					Valid = 1
+					break	
+				else:
+					b = 0
 
-				
-if (bankSize > prgROMtotal):
-	print("exceeds total PRG ROM size...")
-	bankSize = prgROMtotal
-	
-print("bankSize = ", bankSize)
+					
+	if (bankSize > prgROMtotal):
+		print("exceeds total PRG ROM size...")
+		bankSize = prgROMtotal
+		
+	print("bankSize = ", bankSize)
 
 
 
 # start writing the MAIN ASM file
 
 #newName = os.path.splitext(filename)[0] # strip the extension
-newPath = os.path.join(folder, newName + ".asm")	
-	
-fileOutMain = open(newPath,"w") # write text
-print (newName+ ".asm created")
+	newPath = os.path.join(folder, newName + ".asm")	
+		
+	fileOutMain = open(newPath,"w") # write text
+	print (newName+ ".asm created")
 
-	
-fileOutMain.write ("; " + filename + " disassembly\n")
-fileOutMain.write ("; for asm6\n\n")
+		
+	fileOutMain.write ("; " + filename + " disassembly\n")
+	fileOutMain.write ("; for asm6\n\n")
 
-fileOutMain.write ("; *** HEADER ***\n\n")
-fileOutMain.write (".db \"NES\", $1a\n")
-
-
-a = workArray[4] # byte 4
-c = str(a)
-fileOutMain.write (".db " + c + " ; = number of PRG banks * $4000\n")
-
-a = workArray[5] # byte 5
-c = str(a)
-fileOutMain.write (".db " + c + " ; = number of CHR banks * $2000\n")
-
-a = workArray[6] # byte 6
-c = str(a)
-fileOutMain.write (".db " + c + "\t; " + Map + "\n")
-
-a = workArray[7] # byte 7
-c = str(a)
-fileOutMain.write (".db " + c + "\n")
-
-a = workArray[8] # byte 8
-c = str(a)
-fileOutMain.write (".db " + c + "\n")
-
-a = workArray[9] # byte 9
-c = str(a)
-fileOutMain.write (".db " + c + "\n")
-
-a = workArray[10] # byte 10
-c = str(a)
-fileOutMain.write (".db " + c + "\n")
-fileOutMain.write (".db 0,0,0,0,0\n\n") # bytes 11-15
+	fileOutMain.write ("; *** HEADER ***\n\n")
+	fileOutMain.write (".db \"NES\", $1a\n")
 
 
-fileOutMain.write ("; *** PRG ROM ***\n\n")
+	a = workArray[4] # byte 4
+	c = str(a)
+	fileOutMain.write (".db " + c + " ; = number of PRG banks * $4000\n")
 
-if prgROM > 1:
-	fileOutMain.write (".base $8000\n\n")	# default starting address
-else:
-	fileOutMain.write (".base $c000\n\n")	# default starting address
+	a = workArray[5] # byte 5
+	c = str(a)
+	fileOutMain.write (".db " + c + " ; = number of CHR banks * $2000\n")
 
-workArraySmall = [0] * bankSize
+	a = workArray[6] # byte 6
+	c = str(a)
+	fileOutMain.write (".db " + c + "\t; " + Map + "\n")
+
+	a = workArray[7] # byte 7
+	c = str(a)
+	fileOutMain.write (".db " + c + "\n")
+
+	a = workArray[8] # byte 8
+	c = str(a)
+	fileOutMain.write (".db " + c + "\n")
+
+	a = workArray[9] # byte 9
+	c = str(a)
+	fileOutMain.write (".db " + c + "\n")
+
+	a = workArray[10] # byte 10
+	c = str(a)
+	fileOutMain.write (".db " + c + "\n")
+	fileOutMain.write (".db 0,0,0,0,0\n\n") # bytes 11-15
+
+
+	fileOutMain.write ("; *** PRG ROM ***\n\n")
+
+	if prgROM > 1:
+		fileOutMain.write (".base $8000\n\n")	# default starting address
+	else:
+		fileOutMain.write (".base $c000\n\n")	# default starting address
+
+	workArraySmall = [0] * bankSize
 
 
 
 # start writing the other ASM files, bank by bank
 
-bankNumberTotal = int (prgROMtotal / bankSize)
+	bankNumberTotal = int (prgROMtotal / bankSize)
 
-for bankNumber in range (0,bankNumberTotal):
-	currentBank = str(bankNumber)
-	fileOutMain.write(".include "+newName + currentBank + ".asm\n\n")
-	newPath = os.path.join(folder, newName + currentBank + ".asm")	
-	
-	fileOutSmall = open(newPath,"w+") # write text, and read it
-	print (newName+currentBank+ ".asm created")
+	for bankNumber in range (0,bankNumberTotal):
+		currentBank = str(bankNumber)
+		fileOutMain.write(".include "+newName + currentBank + ".asm\n\n")
+		newPath = os.path.join(folder, newName + currentBank + ".asm")	
+		
+		fileOutSmall = open(newPath,"w+") # write text, and read it
+		print (newName+currentBank+ ".asm created")
 
-	fileOutSmall.write (";"+newName+currentBank+"\n\n\n\n")
-	
-	#create a smaller array
-	for i in range (0,bankSize):
-		j = i + 16 + (bankNumber*bankSize)
-		workArraySmall[i] = workArray[j] # note both int arrays
-	
-	# decode the array
-	count = 0
-	while (count < bankSize-2): # change later ?
-		a = workArraySmall[count]	# get 3 bytes, just in case
-		first = str (hex (a)) #convert int to hex string
-		first = first[2:] # strip the 0x off
-		first = first.zfill(2) # at least 2 wide, fill zero
-		a = workArraySmall[count+1]
-		second = str (hex (a))
-		second = second[2:]
-		second = second.zfill(2)
-		a = workArraySmall[count+2]
-		third = str (hex (a))
-		third = third[2:]
-		third = third.zfill(2)
+		fileOutSmall.write (";"+newName+currentBank+"\n\n\n\n")
 		
-		z = str(hex(count))
-		z = z[2:] 
-		z = z.zfill(4)
+		#create a smaller array
+		for i in range (0,bankSize):
+			j = i + 16 + (bankNumber*bankSize)
+			workArraySmall[i] = workArray[j] # note both int arrays
 		
-		fileOutSmall.write("B"+currentBank+"_"+z+":\t")
-		
-		outString = ToASM(first,second,third)
-		fileOutSmall.write(outString+"\n")
-		
-		count += 1
-	
-	# print the final bytes... if needed
-	if (count < bankSize):
-		a = workArraySmall[count]	# get 3 bytes, just in case
-		first = str (hex (a)) #convert int to hex string
-		first = first[2:] # strip the 0x off
-		first = first.zfill(2) # at least 2 wide, fill zero
-		fileOutSmall.write("\t\t.db $" + first+"\n")
-		count += 1
-	if (count < bankSize):
-		a = workArraySmall[count]	# get 3 bytes, just in case
-		first = str (hex (a)) #convert int to hex string
-		first = first[2:] # strip the 0x off
-		first = first.zfill(2) # at least 2 wide, fill zero
-		fileOutSmall.write("\t\t.db $" + first+"\n")
-		count += 1	
-		
-	
-	
-	# remove broken labels	
-	
-	fileOutSmall.seek(0) # needed ?
-	contents = fileOutSmall.readlines()
-	listAll = []
-	for i in range(len(contents)):
-		listAll.extend(contents[i].split())
-		
-	listLabels = [] # make a list of all labels in sub-file
-	
-	word = ""
-	last = ""
-	position = 0
-	
-	loop = len(listAll)
-	for i in range (0,loop):
-		word = str(listAll[i])
-		last = word[-1:]
-		if last == ":":
-			word = word [:-1]
-			listLabels.append(word)
-	
-	# see if reference to label, if not, remove it.
-	fileOutSmall.seek(0)
-	filedata = fileOutSmall.read()
-	
-	for i in range (0,loop):
-		
-		word = str(listAll[i])
-		if word == "bcc" or word == "bcs" or word == "bvc" or word == "bvs" or word == "beq" or word == "bne" or word == "bmi" or word == "bpl":
-			word2 = str(listAll[i+1])
-			if word2 not in listLabels:
-
-				# kill the word in the the original text file now
-				fullword = word+" "+word2+" ;"
-				filedata = filedata.replace(fullword, ";removed\n\t.hex ") # replace it with this
-				
-
+		# decode the array
+		count = 0
+		while (count < bankSize-2): # change later ?
+			a = workArraySmall[count]	# get 3 bytes, just in case
+			first = str (hex (a)) #convert int to hex string
+			first = first[2:] # strip the 0x off
+			first = first.zfill(2) # at least 2 wide, fill zero
+			a = workArraySmall[count+1]
+			second = str (hex (a))
+			second = second[2:]
+			second = second.zfill(2)
+			a = workArraySmall[count+2]
+			third = str (hex (a))
+			third = third[2:]
+			third = third.zfill(2)
 			
-	fileOutSmall.seek(0)
-	fileOutSmall.write(filedata)
-	fileOutSmall.close
-	
-	if bankNumberTotal > bankNumber+1:
-		fileOutMain.write (".base $8000\n\n")	# default starting address, maybe fix this later
+			z = str(hex(count))
+			z = z[2:] 
+			z = z.zfill(4)
+			
+			fileOutSmall.write("B"+currentBank+"_"+z+":\t")
+			
+			outString = ToASM(first,second,third)
+			fileOutSmall.write(outString+"\n")
+			
+			count += 1
+		
+		# print the final bytes... if needed
+		if (count < bankSize):
+			a = workArraySmall[count]	# get 3 bytes, just in case
+			first = str (hex (a)) #convert int to hex string
+			first = first[2:] # strip the 0x off
+			first = first.zfill(2) # at least 2 wide, fill zero
+			fileOutSmall.write("\t\t.db $" + first+"\n")
+			count += 1
+		if (count < bankSize):
+			a = workArraySmall[count]	# get 3 bytes, just in case
+			first = str (hex (a)) #convert int to hex string
+			first = first[2:] # strip the 0x off
+			first = first.zfill(2) # at least 2 wide, fill zero
+			fileOutSmall.write("\t\t.db $" + first+"\n")
+			count += 1	
+			
+		
+		
+		# remove broken labels	
+		
+		fileOutSmall.seek(0) # needed ?
+		contents = fileOutSmall.readlines()
+		listAll = []
+		for i in range(len(contents)):
+			listAll.extend(contents[i].split())
+			
+		listLabels = [] # make a list of all labels in sub-file
+		
+		word = ""
+		last = ""
+		position = 0
+		
+		loop = len(listAll)
+		for i in range (0,loop):
+			word = str(listAll[i])
+			last = word[-1:]
+			if last == ":":
+				word = word [:-1]
+				listLabels.append(word)
+		
+		# see if reference to label, if not, remove it.
+		fileOutSmall.seek(0)
+		filedata = fileOutSmall.read()
+		
+		for i in range (0,loop):
+			
+			word = str(listAll[i])
+			if word == "bcc" or word == "bcs" or word == "bvc" or word == "bvs" or word == "beq" or word == "bne" or word == "bmi" or word == "bpl":
+				word2 = str(listAll[i+1])
+				if word2 not in listLabels:
 
-	# end of sub bank asm decode loop	
+					# kill the word in the the original text file now
+					fullword = word+" "+word2+" ;"
+					filedata = filedata.replace(fullword, ";removed\n\t.hex ") # replace it with this
+					
+
+				
+		fileOutSmall.seek(0)
+		fileOutSmall.write(filedata)
+		fileOutSmall.close
+		
+		if bankNumberTotal > bankNumber+1:
+			fileOutMain.write (".base $8000\n\n")	# default starting address, maybe fix this later
+
+		# end of sub bank asm decode loop	
 
 
-	
-fileOutMain.write ("\n\n; *** CHR ROM ***\n\n")	
-if (chrROM != 0):
-	fileOutMain.write (".incbin "+newName+".chr\n\n")
-else:
-	fileOutMain.write (";No CHR ROM\n\n")
-fileOutMain.close
-fileIn.close					
+		
+	fileOutMain.write ("\n\n; *** CHR ROM ***\n\n")	
+	if (chrROM != 0):
+		fileOutMain.write (".incbin "+newName+".chr\n\n")
+	else:
+		fileOutMain.write (";No CHR ROM\n\n")
+	fileOutMain.close
+	fileIn.close					
 
-print ("done!")
+	print ("done!")
+
+if __name__ == "__main__":
+		main()
