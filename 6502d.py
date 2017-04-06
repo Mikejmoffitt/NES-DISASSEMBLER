@@ -30,9 +30,6 @@ global workArray
 global workArraySmall
 global currentBank
 
-#shift - right click the .nes file - copy as path - paste it here - in quotes, with an r in front
-path = r"C:\Users\Doug\Desktop\PowerPak\py_test\SMB2.nes"
-
 # initialize some variables
 
 count = 0

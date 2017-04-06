@@ -11,18 +11,11 @@
 
 How to use
 ----------
-Shift-Right Click on the .NES file and choose "Copy as Path".
 
-Open the 6502d.py file in a text editor, and paste the path on top of the current entry at line 34...
-
-path = r"C:\Users\Doug\Desktop\PowerPak\test.nes"
-
-Make sure there is an r in front of the starting quote.
-
-Open command line, and (assuming you have python 3 installed)...type
-
-6502d.py
-
+Run 6502d in a command prompt or terminal emulator, and type
+~~~~
+    $ python3 6502d.py <path_to_nes_file>
+~~~~
 
 If the file is a good .NES file, and the filesize matches the header, it should ask you...
 Default Program Bank size OK? Y/N
@@ -39,13 +32,12 @@ asm6 test.asm test.nes
 
 (that's it)
 
-
 Troubleshooting
 ---------------
 
 The very first .nes file I tested...Failed the filesize check. Whoever dumped the ROM, put about 64 bytes at the end of the file, a signature. You would have to open the ROM in a hex editor and delete that part to get it to function...or maybe edit the source code.
 
-Also, if there is a signature in the header (DISKDUDE, etc), my program will not copy it, but remove it. The ROM will run the same, but it's hash value will be different (for comparison / security). I also didn't implement any iNES 2.0 stuff...those bytes will be zero.
+Also, if there is a signature in the header (DISKDUDE, etc), my program will not copy it, but remove it. The ROM will run the same, but its hash value will be different (for comparison / security). I also didn't implement any iNES 2.0 stuff...those bytes will be zero.
 
 You may have to edit the .base directives in the main .asm file. Especially if you are editing the source in the file. Do NOT assume that my program has any idea about what address each bank should start with. 
 
